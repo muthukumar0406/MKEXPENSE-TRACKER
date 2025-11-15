@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Expense Tracker </title>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- Header / Auth / Theme -->
+  <header class="site-header">
+    <div class="container header-inner">
+      <h1 class="app-title">Expense Tracker</h1>
+
+      <div class="header-controls">
+        <label class="theme-switch" title="Toggle dark / light">
+          <input id="theme-toggle" type="checkbox" />
+          <span class="slider"></span>
+          <span id="theme-label">Dark</span>
+        </label>
+
+        <div id="auth-area" class="auth-area">
+          <div id="login-area" class="login-area">
+            <button id="google-signin-btn" class="btn primary">Sign in with Google</button>
+          </div>
+
+          <div id="user-info" class="user-info" style="display:none;">
+            <img id="user-pic" alt="user" class="user-pic" />
+            <span id="user-name" class="user-name"></span>
+            <button id="signout-btn" class="btn">Sign out</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container main-grid">
+    <!-- Summary (row on all screens per your request) -->
+    <section class="summary" aria-label="Summary">
+      <div class="summary-card">
+        <h2>Balance</h2>
+        <p id="balance" class="balance-amount">$0.00</p>
+      </div>
+      <div class="summary-card">
+        <h2>Income</h2>
+        <p id="income" class="income-amount">$0.00</p>
+      </div>
+      <div class="summary-card">
+        <h2>Expense</h2>
+        <p id="expense" class="expense-amount">$0.00</p>
+      </div>
+    </section>
+
+    <!-- Add Transaction (left column on wide, top on narrow) -->
+    <section class="left-column">
+      <div class="card transaction-card">
+        <h3 class="card-title">Add Transaction</h3>
+
+        <form id="transaction-form" class="transaction-form" autocomplete="off">
+          <div class="input-row">
+            <label class="input-label" for="type">Type</label>
+            <div class="input-group">
+              <span class="icon">🔁</span>
+              <select id="type" required>
+                <option value="expense">Expense</option>
+                <option value="income">Income</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="input-row">
+            <label class="input-label" for="category">Category</label>
+            <div class="input-group">
+              <span class="icon">🏷️</span>
+              <select id="category" required>
+   <option value="Gym">🏋️ Gym</option>
+<option value="Food">🍕 Food</option>
+<option value="Transport">🚇 Transport</option>
+<option value="Salary">💼 Salary</option>
+<option value="Rent">🏠 Rent</option>
+<option value="Others">📝 Others</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="input-row">
+            <label class="input-label" for="amount">Amount</label>
+            <div class="input-group">
+              <span class="icon">💲</span>
+              <input id="amount" type="number" step="0.01" min="0.01" placeholder="0.00" required />
+            </div>
+          </div>
+
+          <div class="input-row">
+            <label class="input-label" for="date">Date</label>
+            <div class="input-group">
+              <span class="icon">📅</span>
+              <input id="date" type="date" required />
+            </div>
+          </div>
+
+          <div class="input-row full-width">
+            <label class="input-label" for="description">Description</label>
+            <div class="input-group">
+              <span class="icon">📝</span>
+              <input id="description" type="text" placeholder="Notes (optional)" />
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn primary">Add Transaction</button>
+            <!-- <button type="button" id="clear-local" class="btn">Clear Local</button> -->
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- Charts, Monthly Summary and Transactions -->
+    <section class="right-column">
+      <div class="card charts" aria-hidden="false">
+        <div class="chart-container">
+          <canvas id="categoryChart" aria-label="Category chart"></canvas>
+        </div>
+        <div class="chart-container">
+          <canvas id="monthlyChart" aria-label="Monthly chart"></canvas>
+        </div>
+      </div>
+
+      <!-- Monthly summary table (below charts) -->
+      <div id="monthly-summary" class="card monthly-summary">
+        <h3 class="card-title">Monthly Summary</h3>
+        <div class="table-wrap">
+          <table id="monthly-summary-table">
+            <thead>
+              <tr>
+                <th>Month</th>
+                <th>Income</th>
+                <th>Expense</th>
+                <th>Balance</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card transactions">
+        <div class="transactions-header">
+          <div class="filters" id="filters-row">
+            <select id="filter-type">
+              <option value="all">All Types</option>
+              <option value="income">Income</option>
+              <option value="expense">Expense</option>
+            </select>
+
+            <select id="filter-category">
+              <option value="all">All Categories</option>
+     <option value="Gym">🏋️ Gym</option>
+<option value="Food">🍕 Food</option>
+<option value="Transport">🚇 Transport</option>
+<option value="Salary">💼 Salary</option>
+<option value="Rent">🏠 Rent</option>
+<option value="Others">📝 Others</option>
+            </select>
+
+            <select id="filter-month">
+              <option value="all">All Months</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Category</th>
+                <th>Description</th>
+                <th>Amount</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="transactions-list"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal for alerts -->
+  <div id="alert-modal" class="modal" aria-hidden="true">
+    <div class="modal-content">
+      <span class="close">&times;</span>
+      <p id="alert-message"></p>
+    </div>
+  </div>
+
+  <!-- Script -->
+  <script src="app.js" defer></script>
+</body>
+</html>
