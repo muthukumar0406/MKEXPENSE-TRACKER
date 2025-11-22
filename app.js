@@ -46,12 +46,14 @@ document.addEventListener('DOMContentLoaded', function() {
   const themeLabel = document.getElementById('theme-label');
 
   // Chart contexts
-  const categoryCtx = document.getElementById('categoryChart').getContext('2d');
-  const monthlyCtx = document.getElementById('monthlyChart').getContext('2d');
+  const categoryCtx = document.getElementById('categoryChart')?.getContext('2d');
+  const monthlyCtx = document.getElementById('monthlyChart')?.getContext('2d');
   let categoryChart, monthlyChart;
 
   // Data
   let transactions = JSON.parse(localStorage.getItem('transactions')) || [];
+  // expose to global for the Insights small script that reads window.transactions
+  window.transactions = transactions;
 
   // Firebase runtime
   let firebaseReady = false;
@@ -97,15 +99,20 @@ document.addEventListener('DOMContentLoaded', function() {
       clearTimeout(rt);
       rt = setTimeout(() => updateCharts(), 180);
     });
+
+    // expose refreshAllViews for other scripts
+    window.refreshAllViews = refreshAllViews;
+    // ensure window.transactions points to the app's transactions array
+    window.transactions = transactions;
   }
 
   function setupEventListeners() {
-    transactionForm.addEventListener('submit', addTransaction);
-    filterType.addEventListener('change', onFilterChange);
-    filterCategory.addEventListener('change', onFilterChange);
-    filterMonth.addEventListener('change', onFilterChange);
+    transactionForm?.addEventListener('submit', addTransaction);
+    filterType?.addEventListener('change', onFilterChange);
+    filterCategory?.addEventListener('change', onFilterChange);
+    filterMonth?.addEventListener('change', onFilterChange);
 
-    closeModal.addEventListener('click', () => modal.style.display = 'none');
+    closeModal?.addEventListener('click', () => modal.style.display = 'none');
     window.addEventListener('click', (e) => { if (e.target === modal) modal.style.display = 'none'; });
 
     clearLocalBtn?.addEventListener('click', () => {
@@ -115,11 +122,11 @@ document.addEventListener('DOMContentLoaded', function() {
       refreshAllViews();
     });
 
-    themeToggle.addEventListener('change', async () => {
+    themeToggle?.addEventListener('change', async () => {
       const newTheme = themeToggle.checked ? 'dark' : 'light';
       setTheme(newTheme);
       localStorage.setItem('et_theme', newTheme);
-      if (firebaseReady && auth.currentUser) {
+      if (firebaseReady && auth?.currentUser) {
         try { await db.collection('users').doc(auth.currentUser.uid).set({ theme: newTheme }, { merge: true }); }
         catch(e){ console.warn('Unable to save theme to cloud', e); }
       }
@@ -138,6 +145,7 @@ document.addEventListener('DOMContentLoaded', function() {
     transactions.forEach(t => {
       if (!t.date) return;
       const d = new Date(t.date);
+      if (isNaN(d)) return;
       const key = `${monthNames[d.getMonth()]} ${d.getFullYear()}`;
       months.add(key);
     });
@@ -145,7 +153,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // clear old options except default
     while (filterMonth.options.length > 1) filterMonth.remove(1);
     Array.from(months).sort((a,b) => {
-      // sort by year-month descending
       const [ma, ya] = a.split(' '); const [mb, yb] = b.split(' ');
       const ia = new Date(`${ma} 1, ${ya}`).getTime();
       const ib = new Date(`${mb} 1, ${yb}`).getTime();
@@ -158,7 +165,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
   async function addTransaction(e) {
     e.preventDefault();
-    const type = document.getElementById('type').value;
+    const typeRaw = document.getElementById('type').value;
+    const type = String(typeRaw || '').toLowerCase();
     const category = document.getElementById('category').value;
     const amountRaw = document.getElementById('amount').value;
     const amountParsed = parseFloat(amountRaw);
@@ -181,6 +189,8 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     transactions.push(tx);
+    // keep global reference up to date
+    window.transactions = transactions;
     saveTransactions();
     refreshAllViews();
 
@@ -215,6 +225,8 @@ document.addEventListener('DOMContentLoaded', function() {
   function deleteTransaction(id) {
     const tx = transactions.find(t => t.id === id);
     transactions = transactions.filter(t => t.id !== id);
+    // update global ref
+    window.transactions = transactions;
     saveTransactions();
     refreshAllViews();
 
@@ -233,10 +245,12 @@ document.addEventListener('DOMContentLoaded', function() {
     updateTransactionList();
     updateCharts();
     updateMonthlySummary();
+    // expose globally
+    window.transactions = transactions;
   }
 
   function updateSummary() {
-    const amounts = transactions.map(t => t.amount || 0);
+    const amounts = transactions.map(t => Number(t.amount) || 0);
     const total = amounts.reduce((s, n) => s + n, 0);
     const income = amounts.filter(n => n > 0).reduce((s, n) => s + n, 0);
     const expense = Math.abs(amounts.filter(n => n < 0).reduce((s, n) => s + n, 0));
@@ -258,8 +272,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     let filtered = [...transactions];
 
-    if (type !== 'all') filtered = filtered.filter(t => t.type === type);
-    if (category !== 'all') filtered = filtered.filter(t => t.category === category);
+    if (type !== 'all') filtered = filtered.filter(t => String(t.type).toLowerCase() === String(type).toLowerCase());
+    if (category !== 'all') filtered = filtered.filter(t => String(t.category) === String(category));
     if (month !== 'all') {
       const [monthName, year] = month.split(' ');
       const monthIndex = new Date(`${monthName} 1, ${year}`).getMonth();
@@ -282,8 +296,8 @@ document.addEventListener('DOMContentLoaded', function() {
     filtered.forEach(t => {
       const row = document.createElement('tr');
       const amountDisplay = Math.abs(t.amount).toFixed(2);
-      const typeDisplay = t.type.charAt(0).toUpperCase() + t.type.slice(1);
-      const categoryDisplay = t.category.charAt(0).toUpperCase() + t.category.slice(1);
+      const typeDisplay = String(t.type || '').charAt(0).toUpperCase() + String(t.type || '').slice(1);
+      const categoryDisplay = String(t.category || '').charAt(0).toUpperCase() + String(t.category || '').slice(1);
       row.innerHTML = `
         <td style="white-space:nowrap">${formatDate(t.date)}</td>
         <td>${typeDisplay}</td>
@@ -295,7 +309,7 @@ document.addEventListener('DOMContentLoaded', function() {
       transactionsList.appendChild(row);
     });
 
-    // attach delete handlers (clear duplicates)
+    // attach delete handlers
     document.querySelectorAll('.delete-btn').forEach(btn => {
       btn.replaceWith(btn.cloneNode(true));
     });
@@ -314,13 +328,16 @@ document.addEventListener('DOMContentLoaded', function() {
     if (categoryChart) try{ categoryChart.destroy(); }catch(e){}
     if (monthlyChart) try{ monthlyChart.destroy(); }catch(e){}
 
-    // categories
-    const categories = ['food','rent','entertainment','other'];
+    if (!categoryCtx || !monthlyCtx) return;
+
+    // categories match your HTML select values
+    const categories = ['Gym','Food','Transport','Salary','Rent','Others'];
+
     const expenseData = categories.map(cat =>
-      Math.abs(transactions.filter(t => t.type==='expense' && t.category===cat).reduce((s,n) => s + n.amount, 0))
+      Math.abs(transactions.filter(t => String(t.type).toLowerCase() === 'expense' && String(t.category).toLowerCase() === String(cat).toLowerCase()).reduce((s,n) => s + (Number(n.amount) || 0), 0))
     );
     const incomeData = categories.map(cat =>
-      transactions.filter(t => t.type==='income' && t.category===cat).reduce((s,n) => s + n.amount, 0)
+      transactions.filter(t => String(t.type).toLowerCase() === 'income' && String(t.category).toLowerCase() === String(cat).toLowerCase()).reduce((s,n) => s + (Number(n.amount) || 0), 0)
     );
 
     // ensure container heights so maintainAspectRatio:false works
@@ -332,7 +349,7 @@ document.addEventListener('DOMContentLoaded', function() {
     categoryChart = new Chart(categoryCtx, {
       type: 'bar',
       data: {
-        labels: categories.map(c => c.charAt(0).toUpperCase()+c.slice(1)),
+        labels: categories.map(c => c),
         datasets: [
           { label:'Income', data: incomeData, backgroundColor: 'rgba(52,152,219,0.75)', borderColor:'rgba(52,152,219,1)', borderWidth:1 },
           { label:'Expenses', data: expenseData, backgroundColor: 'rgba(231,76,60,0.75)', borderColor:'rgba(231,76,60,1)', borderWidth:1 }
@@ -351,10 +368,11 @@ document.addEventListener('DOMContentLoaded', function() {
     transactions.forEach(t => {
       if (!t.date) return;
       const d = new Date(t.date);
+      if (isNaN(d)) return;
       const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
       if (!monthlyData[key]) monthlyData[key] = { income:0, expense:0 };
-      if (t.amount > 0) monthlyData[key].income += t.amount;
-      else monthlyData[key].expense += Math.abs(t.amount);
+      if ((Number(t.amount) || 0) > 0) monthlyData[key].income += Number(t.amount);
+      else monthlyData[key].expense += Math.abs(Number(t.amount) || 0);
     });
 
     const sortedMonths = Object.keys(monthlyData).sort();
@@ -388,11 +406,12 @@ document.addEventListener('DOMContentLoaded', function() {
     transactions.forEach(t => {
       if (!t.date) return;
       const d = new Date(t.date);
+      if (isNaN(d)) return;
       const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; // yyyy-mm
       const label = `${d.toLocaleDateString(undefined,{ month:'short' })} ${d.getFullYear()}`;
       if (!monthly[key]) monthly[key] = { income:0, expense:0, label };
-      if (t.amount > 0) monthly[key].income += t.amount;
-      else monthly[key].expense += Math.abs(t.amount);
+      if (Number(t.amount) > 0) monthly[key].income += Number(t.amount);
+      else monthly[key].expense += Math.abs(Number(t.amount));
     });
 
     // Build rows sorted descending
@@ -401,7 +420,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const selectedMonth = filterMonth.value; // 'All Months' -> 'all' else 'Month Year'
     let filteredRows = rows;
     if (selectedMonth && selectedMonth !== 'all') {
-      // convert selectedMonth "January 2025" to key "2025-01"
       const [mName, y] = selectedMonth.split(' ');
       const mIndex = new Date(`${mName} 1, ${y}`).getMonth() + 1;
       const key = `${y}-${String(mIndex).padStart(2,'0')}`;
@@ -469,12 +487,12 @@ document.addEventListener('DOMContentLoaded', function() {
     auth = firebase.auth();
     db = firebase.firestore();
 
-    googleSigninBtn.addEventListener('click', () => {
+    googleSigninBtn?.addEventListener('click', () => {
       const provider = new firebase.auth.GoogleAuthProvider();
       auth.signInWithPopup(provider).catch(err => console.error('Sign-in error', err));
     });
 
-    signoutBtn.addEventListener('click', () => auth.signOut());
+    signoutBtn?.addEventListener('click', () => auth.signOut());
 
     auth.onAuthStateChanged(async (user) => {
       if (user) {
@@ -503,6 +521,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (unsubscribeSnapshot) { unsubscribeSnapshot(); unsubscribeSnapshot = null; }
         transactions = JSON.parse(localStorage.getItem('transactions')) || [];
+        // normalize types locally
+        transactions = transactions.map(t => Object.assign({}, t, { type: String(t.type || '').toLowerCase() }));
+        window.transactions = transactions;
         refreshAllViews();
       }
     });
@@ -524,7 +545,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // push local to cloud
         for (const l of local) {
           const clone = {
-            type: l.type,
+            type: String(l.type || '').toLowerCase(),
             category: l.category,
             amount: l.amount,
             description: l.description || '',
@@ -541,15 +562,16 @@ document.addEventListener('DOMContentLoaded', function() {
           if (d.createdAt && d.createdAt.toDate) d.createdAt = d.createdAt.toDate().toISOString();
           cloud2.push(Object.assign({ id: doc.id }, d));
         });
-        transactions = cloud2.map(c => ({ id: c.id, type: c.type, category: c.category, amount: c.amount, description: c.description || '', date: c.date || c.createdAt }));
+        transactions = cloud2.map(c => ({ id: c.id, type: String(c.type || '').toLowerCase(), category: c.category, amount: c.amount, description: c.description || '', date: c.date || c.createdAt }));
         saveTransactions();
       } else if (cloud.length > 0) {
-        transactions = cloud.map(c => ({ id: c.id, type: c.type, category: c.category, amount: c.amount, description: c.description || '', date: c.date || c.createdAt }));
+        transactions = cloud.map(c => ({ id: c.id, type: String(c.type || '').toLowerCase(), category: c.category, amount: c.amount, description: c.description || '', date: c.date || c.createdAt }));
         saveTransactions();
       } else {
-        transactions = local;
+        transactions = local.map(l => Object.assign({}, l, { type: String(l.type || '').toLowerCase() }));
       }
 
+      window.transactions = transactions;
       refreshAllViews();
 
       if (unsubscribeSnapshot) unsubscribeSnapshot();
@@ -561,14 +583,17 @@ document.addEventListener('DOMContentLoaded', function() {
             if (d.createdAt && d.createdAt.toDate) d.createdAt = d.createdAt.toDate().toISOString();
             data.push(Object.assign({ id: doc.id }, d));
           });
-          transactions = data.map(c => ({ id: c.id, type: c.type, category: c.category, amount: c.amount, description: c.description || '', date: c.date || c.createdAt }));
+          transactions = data.map(c => ({ id: c.id, type: String(c.type || '').toLowerCase(), category: c.category, amount: c.amount, description: c.description || '', date: c.date || c.createdAt }));
           saveTransactions();
+          window.transactions = transactions;
           refreshAllViews();
         }, err => { console.warn('Realtime error', err); });
 
     } catch(e) {
       console.warn('Cloud load error', e);
       transactions = JSON.parse(localStorage.getItem('transactions')) || [];
+      transactions = transactions.map(t => Object.assign({}, t, { type: String(t.type || '').toLowerCase() }));
+      window.transactions = transactions;
       refreshAllViews();
     }
   }
@@ -581,3 +606,361 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
 }); // DOMContentLoaded
+
+
+/* ===== UI: Mobile menu (slide from right) and Insights (category + month combined) ===== */
+
+/* ===== UI: Mobile menu (slide from right) and Insights (category + month combined) ===== */
+(function(){
+  document.addEventListener('DOMContentLoaded', function () {
+    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+    const mobileMenu = document.getElementById('mobile-menu');
+    const mobileMenuClose = document.getElementById('mobile-menu-close');
+    const mobileMenuLinks = document.querySelectorAll('.mobile-nav-link');
+    const mobileSignInBtn = document.getElementById('mobile-google-signin-btn');
+    const themeToggle = document.getElementById('theme-toggle');
+    const mobileThemeToggle = document.getElementById('mobile-theme-toggle');
+
+    function openMobileMenu(){
+      if(!mobileMenu) return;
+      mobileMenu.classList.add('open');
+      mobileMenu.setAttribute('aria-hidden','false');
+      mobileMenuBtn && mobileMenuBtn.setAttribute('aria-expanded','true');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeMobileMenu(){
+      if(!mobileMenu) return;
+      mobileMenu.classList.remove('open');
+      mobileMenu.setAttribute('aria-hidden','true');
+      mobileMenuBtn && mobileMenuBtn.setAttribute('aria-expanded','false');
+      document.body.style.overflow = '';
+    }
+
+    if(mobileMenuBtn){
+      mobileMenuBtn.addEventListener('click', function(e){
+        e.stopPropagation();
+        const expanded = mobileMenuBtn.getAttribute('aria-expanded') === 'true';
+        if(expanded) closeMobileMenu(); else openMobileMenu();
+      });
+    }
+    if(mobileMenuClose) mobileMenuClose.addEventListener('click', closeMobileMenu);
+    if(mobileMenu){
+      mobileMenu.addEventListener('click', function(e){
+        if(e.target === mobileMenu) closeMobileMenu();
+      });
+    }
+    document.addEventListener('keydown', function(e){
+      if(e.key === 'Escape') closeMobileMenu();
+    });
+
+    // mobile links scroll & close
+    mobileMenuLinks.forEach(link => {
+      link.addEventListener('click', function(e){
+        e.preventDefault();
+        const target = link.getAttribute('data-target');
+        if(target){
+          const el = document.getElementById(target);
+          if(el) el.scrollIntoView({behavior:'smooth', block:'start'});
+        }
+        closeMobileMenu();
+      });
+    });
+
+    if(mobileSignInBtn){
+      mobileSignInBtn.addEventListener('click', function(){
+        const desktopBtn = document.getElementById('google-signin-btn');
+        if(desktopBtn) desktopBtn.click();
+      });
+    }
+    if(mobileThemeToggle){
+      mobileThemeToggle.addEventListener('click', function(){
+        if(themeToggle){
+          themeToggle.checked = !themeToggle.checked;
+          themeToggle.dispatchEvent(new Event('change'));
+        }
+      });
+    }
+
+    // -----------------------
+    // Insights functionality
+    // -----------------------
+    const insightsSelect = document.getElementById('insights-category');
+    const insightsMonthSelect = document.getElementById('insights-month');
+    const globalMonthFilter = document.getElementById('filter-month'); // existing filter
+    const insightsContainer = document.querySelector('.insights');
+
+    // helper: populate the insights month select (mirror global months)
+    function populateInsightsMonths() {
+      if(!insightsMonthSelect) return;
+      // clear except default
+      while (insightsMonthSelect.options.length > 1) insightsMonthSelect.remove(1);
+
+      // gather months from global transactions (window.transactions)
+      try {
+        const monthsSet = new Set();
+        (window.transactions || []).forEach(t => {
+          if(!t || !t.date) return;
+          const d = new Date(t.date);
+          if(isNaN(d)) return;
+          const label = `${d.toLocaleDateString(undefined,{ month:'long' })} ${d.getFullYear()}`;
+          monthsSet.add(label);
+        });
+        // sort newest first
+        Array.from(monthsSet).sort((a,b) => {
+          const [ma, ya] = a.split(' '); const [mb, yb] = b.split(' ');
+          return new Date(`${yb} 1`).getTime() - new Date(`${ya} 1`).getTime();
+        }).forEach(m => {
+          const opt = document.createElement('option');
+          opt.value = m; opt.textContent = m;
+          insightsMonthSelect.appendChild(opt);
+        });
+      } catch(e) { /* ignore */ }
+    }
+
+    if(insightsContainer){
+      let insightsSummary = document.getElementById('insights-summary');
+      if(!insightsSummary){
+        insightsSummary = document.createElement('div');
+        insightsSummary.id = 'insights-summary';
+        insightsSummary.className = 'insights-summary';
+        insightsContainer.appendChild(insightsSummary);
+      }
+
+      function formatMoney(v){ return '$'+Number(v||0).toFixed(2); }
+
+      function getFilteredTransactions(category, monthLabel){
+        if(!window.transactions) return [];
+        let arr = Array.isArray(window.transactions) ? window.transactions.slice() : [];
+        if(category && category !== 'all'){
+          arr = arr.filter(t => String(t.category) === String(category));
+        }
+        // month selection priority: insightsMonthSelect -> passed monthLabel -> globalMonthFilter
+        let mLabel = 'all';
+        if(insightsMonthSelect && insightsMonthSelect.value) mLabel = insightsMonthSelect.value;
+        else if(monthLabel) mLabel = monthLabel;
+        else if(globalMonthFilter && globalMonthFilter.value) mLabel = globalMonthFilter.value;
+
+        if(mLabel && mLabel !== 'all'){
+          const [mName, y] = mLabel.split(' ');
+          const monthIndex = new Date(mName + ' 1, ' + y).getMonth();
+          arr = arr.filter(t => {
+            if(!t.date) return false;
+            const d = new Date(t.date);
+            return d.getFullYear() === parseInt(y,10) && d.getMonth() === monthIndex;
+          });
+        }
+        return arr;
+      }
+
+      function updateInsights(){
+        // ensure months are populated (so "All Months" + specific months available)
+        populateInsightsMonths();
+
+        const category = insightsSelect ? insightsSelect.value : 'all';
+        const items = getFilteredTransactions(category);
+
+        let income = 0, expense = 0;
+        items.forEach(t => {
+          const amountNum = Number(t.amount || 0);
+          const tType = String(t.type || '').toLowerCase();
+          if(tType === 'income') income += amountNum;
+          else if(tType === 'expense') expense += Math.abs(amountNum);
+          else {
+            if(amountNum >= 0) income += amountNum;
+            else expense += Math.abs(amountNum);
+          }
+        });
+        const balance = income - expense;
+
+        insightsSummary.innerHTML = '';
+        const cards = [
+          {title:'Income', val: formatMoney(income), cls:'income'},
+          {title:'Expense', val: formatMoney(expense), cls:'expense'},
+          {title:'Balance', val: formatMoney(balance), cls:'balance'}
+        ];
+        cards.forEach(c => {
+          const d = document.createElement('div');
+          d.className = 'insight-card';
+          d.innerHTML = '<h4>'+c.title+'</h4><p class="'+c.cls+'">'+c.val+'</p>';
+          insightsSummary.appendChild(d);
+        });
+      }
+
+      // wire change events
+      if(insightsSelect) insightsSelect.addEventListener('change', updateInsights);
+      if(insightsMonthSelect) insightsMonthSelect.addEventListener('change', updateInsights);
+      if(globalMonthFilter) globalMonthFilter.addEventListener('change', updateInsights);
+
+      // call update on initial load and whenever transactions refresh
+      updateInsights();
+      // Also hook into refreshAllViews if available
+      if(typeof window.refreshAllViews === 'function'){
+        const orig = window.refreshAllViews;
+        window.refreshAllViews = function(){
+          try{ orig(); } catch(e){ console.warn(e); }
+          populateInsightsMonths();
+          updateInsights();
+        };
+      } else {
+        setInterval(() => { populateInsightsMonths(); updateInsights(); }, 2000);
+      }
+    }
+  });
+})();
+
+
+
+
+// (function(){
+//   document.addEventListener('DOMContentLoaded', function () {
+//     const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+//     const mobileMenu = document.getElementById('mobile-menu');
+//     const mobileMenuClose = document.getElementById('mobile-menu-close');
+//     const mobileMenuLinks = document.querySelectorAll('.mobile-nav-link');
+//     const desktopNavLinks = document.querySelectorAll('.main-nav .nav-link');
+//     const mobileSignInBtn = document.getElementById('mobile-google-signin-btn');
+//     const themeToggle = document.getElementById('theme-toggle');
+//     const mobileThemeToggle = document.getElementById('mobile-theme-toggle');
+
+//     function openMobileMenu(){
+//       if(!mobileMenu) return;
+//       mobileMenu.classList.add('open');
+//       mobileMenu.setAttribute('aria-hidden','false');
+//       mobileMenuBtn && mobileMenuBtn.setAttribute('aria-expanded','true');
+//       document.body.style.overflow = 'hidden';
+//     }
+//     function closeMobileMenu(){
+//       if(!mobileMenu) return;
+//       mobileMenu.classList.remove('open');
+//       mobileMenu.setAttribute('aria-hidden','true');
+//       mobileMenuBtn && mobileMenuBtn.setAttribute('aria-expanded','false');
+//       document.body.style.overflow = '';
+//     }
+
+//     if(mobileMenuBtn){
+//       mobileMenuBtn.addEventListener('click', function(e){
+//         e.stopPropagation();
+//         const expanded = mobileMenuBtn.getAttribute('aria-expanded') === 'true';
+//         if(expanded) closeMobileMenu(); else openMobileMenu();
+//       });
+//     }
+//     if(mobileMenuClose) mobileMenuClose.addEventListener('click', closeMobileMenu);
+//     if(mobileMenu){
+//       mobileMenu.addEventListener('click', function(e){
+//         if(e.target === mobileMenu) closeMobileMenu();
+//       });
+//     }
+//     document.addEventListener('keydown', function(e){
+//       if(e.key === 'Escape') closeMobileMenu();
+//     });
+
+//     // mobile links scroll & close
+//     mobileMenuLinks.forEach(link => {
+//       link.addEventListener('click', function(e){
+//         e.preventDefault();
+//         const target = link.getAttribute('data-target');
+//         if(target){
+//           const el = document.getElementById(target);
+//           if(el) el.scrollIntoView({behavior:'smooth', block:'start'});
+//         }
+//         closeMobileMenu();
+//       });
+//     });
+
+//     if(mobileSignInBtn){
+//       mobileSignInBtn.addEventListener('click', function(){
+//         const desktopBtn = document.getElementById('google-signin-btn');
+//         if(desktopBtn) desktopBtn.click();
+//       });
+//     }
+//     if(mobileThemeToggle){
+//       mobileThemeToggle.addEventListener('click', function(){
+//         if(themeToggle){
+//           themeToggle.checked = !themeToggle.checked;
+//           themeToggle.dispatchEvent(new Event('change'));
+//         }
+//       });
+//     }
+
+//     // Insights functionality: uses global 'transactions' and existing filterMonth element
+//     // const insightsSelect = document.getElementById('insights-category');
+//     // const globalMonthFilter = document.getElementById('filter-month');
+//     // const insightsContainer = document.querySelector('.insights');
+
+//     // if(insightsContainer){
+//     //   let insightsSummary = document.getElementById('insights-summary');
+//     //   if(!insightsSummary){
+//     //     insightsSummary = document.createElement('div');
+//     //     insightsSummary.id = 'insights-summary';
+//     //     insightsSummary.className = 'insights-summary';
+//     //     insightsContainer.appendChild(insightsSummary);
+//     //   }
+
+//     //   function formatMoney(v){ return '$'+Number(v||0).toFixed(2); }
+
+//     //   function getFilteredTransactions(category, monthLabel){
+//     //     // use the globally-exposed transactions
+//     //     if(!window.transactions) return [];
+//     //     let arr = window.transactions.slice();
+//     //     if(category && category !== 'all'){
+//     //       arr = arr.filter(t => String(t.category) === String(category));
+//     //     }
+//     //     if(monthLabel && monthLabel !== 'all'){
+//     //       const [mName, y] = monthLabel.split(' ');
+//     //       const monthIndex = new Date(mName + ' 1, ' + y).getMonth();
+//     //       arr = arr.filter(t => {
+//     //         if(!t.date) return false;
+//     //         const d = new Date(t.date);
+//     //         return d.getFullYear() === parseInt(y,10) && d.getMonth() === monthIndex;
+//     //       });
+//     //     }
+//     //     return arr;
+//     //   }
+
+//     //   function updateInsights(){
+//     //     const category = insightsSelect ? insightsSelect.value : 'all';
+//     //     const monthLabel = globalMonthFilter ? globalMonthFilter.value : 'all';
+//     //     const items = getFilteredTransactions(category, monthLabel);
+
+//     //     let income = 0, expense = 0;
+//     //     items.forEach(t => {
+//     //       if(t.type && String(t.type).toLowerCase() === 'income') income += Number(t.amount || 0);
+//     //       else if(t.type && String(t.type).toLowerCase() === 'expense') expense += Math.abs(Number(t.amount || 0));
+//     //       else {
+//     //         if(Number(t.amount) >= 0) income += Number(t.amount || 0);
+//     //         else expense += Math.abs(Number(t.amount || 0));
+//     //       }
+//     //     });
+//     //     const balance = income - expense;
+
+//     //     insightsSummary.innerHTML = '';
+//     //     const cards = [
+//     //       {title:'Income', val: formatMoney(income), cls:'income'},
+//     //       {title:'Expense', val: formatMoney(expense), cls:'expense'},
+//     //       {title:'Balance', val: formatMoney(balance), cls:'balance'}
+//     //     ];
+//     //     cards.forEach(c => {
+//     //       const d = document.createElement('div');
+//     //       d.className = 'insight-card';
+//     //       d.innerHTML = '<h4>'+c.title+'</h4><p class="'+c.cls+'">'+c.val+'</p>';
+//     //       insightsSummary.appendChild(d);
+//     //     });
+//     //   }
+
+//     //   if(insightsSelect) insightsSelect.addEventListener('change', updateInsights);
+//     //   if(globalMonthFilter) globalMonthFilter.addEventListener('change', updateInsights);
+
+//     //   // Hook into existing refreshAllViews if available
+//     //   if(typeof window.refreshAllViews === 'function'){
+//     //     const orig = window.refreshAllViews;
+//     //     window.refreshAllViews = function(){
+//     //       try{ orig(); }catch(e){ console.warn(e); }
+//     //       updateInsights();
+//     //     };
+//     //   } else {
+//     //     updateInsights();
+//     //     setInterval(updateInsights, 2000);
+//     //   }
+//     // }
+//   });
+// })();

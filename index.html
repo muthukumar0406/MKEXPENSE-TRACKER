@@ -3,43 +3,85 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Expense Tracker </title>
+  <title>Expense Tracker try </title>
 
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
   <!-- Styles -->
   <link rel="stylesheet" href="styles.css" />
+  <!-- <link rel="stylesheet" href="style2.css"> -->
 </head>
 <body>
-  <!-- Header / Auth / Theme -->
-  <header class="site-header">
-    <div class="container header-inner">
+  <!-- Header / Nav / Auth / Theme -->
+ <header class="site-header">
+  <div class="header-inner">
+    <!-- Left: Logo / Title -->
+    <div class="left-header">
       <h1 class="app-title">Expense Tracker</h1>
+    </div>
 
-      <div class="header-controls">
-        <label class="theme-switch" title="Toggle dark / light">
-          <input id="theme-toggle" type="checkbox" />
-          <span class="slider"></span>
-          <span id="theme-label">Dark</span>
-        </label>
+    <!-- Center: Nav Links (desktop center) -->
+    <nav class="main-nav" aria-label="Main navigation">
+      <a href="#home" class="nav-link active" data-target="home">Home</a>
+      <a href="#history" class="nav-link" data-target="history">History</a>
+      <a href="#monthly" class="nav-link" data-target="monthly">Monthly Transactions</a>
+      <a href="#insights" class="nav-link" data-target="insights">Insights</a>
+      <a href="#contact" class="nav-link" data-target="contact">Contact Me</a>
+      <button id="theme-link" class="nav-link btn-link" title="Toggle theme">Theme</button>
+    </nav>
 
-        <div id="auth-area" class="auth-area">
-          <div id="login-area" class="login-area">
-            <button id="google-signin-btn" class="btn primary">Sign in with Google</button>
-          </div>
+    <!-- Right: Theme switch + Auth area + Mobile hamburger (on right) -->
+    <div class="header-controls">
+      <label class="theme-switch" title="Toggle dark / light">
+        <input id="theme-toggle" type="checkbox" />
+        <span class="slider"></span>
+        <span id="theme-label">Dark</span>
+      </label>
 
-          <div id="user-info" class="user-info" style="display:none;">
-            <img id="user-pic" alt="user" class="user-pic" />
-            <span id="user-name" class="user-name"></span>
-            <button id="signout-btn" class="btn">Sign out</button>
-          </div>
+      <div id="auth-area" class="auth-area">
+        <div id="login-area" class="login-area">
+          <button id="google-signin-btn" class="btn primary">Sign in with Google</button>
+        </div>
+
+        <div id="user-info" class="user-info" style="display:none;">
+          <img id="user-pic" alt="user" class="user-pic" />
+          <span id="user-name" class="user-name"></span>
+          <button id="signout-btn" class="btn">Sign out</button>
         </div>
       </div>
-    </div>
-  </header>
 
-  <main class="container main-grid">
+      <!-- Mobile hamburger (kept on right) -->
+      <button id="mobile-menu-btn" class="hamburger" aria-label="Open menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Mobile slider menu -->
+  <div id="mobile-menu" class="mobile-menu" aria-hidden="true">
+    <div class="mobile-menu-inner">
+      <button id="mobile-menu-close" class="mobile-close" aria-label="Close menu">&times;</button>
+
+      <nav class="mobile-nav" aria-label="Mobile navigation">
+        <a href="#home" class="mobile-nav-link" data-target="home">Home</a>
+        <a href="#history" class="mobile-nav-link" data-target="history">History</a>
+        <a href="#monthly" class="mobile-nav-link" data-target="monthly">Monthly Transactions</a>
+        <a href="#insights" class="mobile-nav-link" data-target="insights">Insights</a>
+        <a href="#contact" class="mobile-nav-link" data-target="contact">Contact Me</a>
+        <button id="mobile-theme-toggle" class="btn">Toggle Theme</button>
+
+        <div class="mobile-auth">
+          <button id="mobile-google-signin-btn" class="btn primary">Sign in with Google</button>
+        </div>
+      </nav>
+    </div>
+  </div>
+</header>
+
+
+  <!-- Main content -->
+  <main class="container main-grid" id="home">
     <!-- Summary (row on all screens per your request) -->
     <section class="summary" aria-label="Summary">
       <div class="summary-card">
@@ -78,12 +120,12 @@
             <div class="input-group">
               <span class="icon">🏷️</span>
               <select id="category" required>
-   <option value="Gym">🏋️ Gym</option>
-<option value="Food">🍕 Food</option>
-<option value="Transport">🚇 Transport</option>
-<option value="Salary">💼 Salary</option>
-<option value="Rent">🏠 Rent</option>
-<option value="Others">📝 Others</option>
+                <option value="Gym">🏋️ Gym</option>
+                <option value="Food">🍕 Food</option>
+                <option value="Transport">🚇 Transport</option>
+                <option value="Salary">💼 Salary</option>
+                <option value="Rent">🏠 Rent</option>
+                <option value="Others">📝 Others</option>
               </select>
             </div>
           </div>
@@ -114,14 +156,13 @@
 
           <div class="form-actions">
             <button type="submit" class="btn primary">Add Transaction</button>
-            <!-- <button type="button" id="clear-local" class="btn">Clear Local</button> -->
           </div>
         </form>
       </div>
     </section>
 
     <!-- Charts, Monthly Summary and Transactions -->
-    <section class="right-column">
+    <section class="right-column" id="charts-area">
       <div class="card charts" aria-hidden="false">
         <div class="chart-container">
           <canvas id="categoryChart" aria-label="Category chart"></canvas>
@@ -130,26 +171,11 @@
           <canvas id="monthlyChart" aria-label="Monthly chart"></canvas>
         </div>
       </div>
+    </section>
 
-      <!-- Monthly summary table (below charts) -->
-      <div id="monthly-summary" class="card monthly-summary">
-        <h3 class="card-title">Monthly Summary</h3>
-        <div class="table-wrap">
-          <table id="monthly-summary-table">
-            <thead>
-              <tr>
-                <th>Month</th>
-                <th>Income</th>
-                <th>Expense</th>
-                <th>Balance</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="card transactions">
+     <section id="history">
+      <div class="card transactions" id="history">
+        <h3 id="monthly-heading" class="card-title">All Trans</h3>
         <div class="transactions-header">
           <div class="filters" id="filters-row">
             <select id="filter-type">
@@ -160,12 +186,12 @@
 
             <select id="filter-category">
               <option value="all">All Categories</option>
-     <option value="Gym">🏋️ Gym</option>
-<option value="Food">🍕 Food</option>
-<option value="Transport">🚇 Transport</option>
-<option value="Salary">💼 Salary</option>
-<option value="Rent">🏠 Rent</option>
-<option value="Others">📝 Others</option>
+              <option value="Gym">🏋️ Gym</option>
+              <option value="Food">🍕 Food</option>
+              <option value="Transport">🚇 Transport</option>
+              <option value="Salary">💼 Salary</option>
+              <option value="Rent">🏠 Rent</option>
+              <option value="Others">📝 Others</option>
             </select>
 
             <select id="filter-month">
@@ -191,7 +217,155 @@
         </div>
       </div>
     </section>
-  </main>
+
+    <section id="monthly">
+      <!-- Monthly summary table (below charts) -->
+      <div id="monthly-summary" class="card monthly-summary" aria-labelledby="monthly-heading">
+        <h3 id="monthly-heading" class="card-title">Monthly Summary</h3>
+        <div class="table-wrap">
+          <table id="monthly-summary-table">
+            <thead>
+              <tr>
+                <th>Month</th>
+                <th>Income</th>
+                <th>Expense</th>
+                <th>Balance</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+   
+  
+
+  <!-- Insights Section -->
+<!-- Insights Section -->
+<section class="container card insights" id="insights" aria-label="Insights">
+  <h3 class="card-title">Insights</h3>
+  <p class="muted">Use filters to refine categories and months. The charts show category breakdown and monthly trends.</p>
+
+  <div class="insights-controls">
+    <label for="insights-category" style="min-width:90px;">Filter by category</label>
+    <select id="insights-category">
+      <option value="all">All Categories</option>
+      <option value="Gym">Gym</option>
+      <option value="Food">Food</option>
+      <option value="Transport">Transport</option>
+      <option value="Salary">Salary</option>
+      <option value="Rent">Rent</option>
+      <option value="Others">Others</option>
+    </select>
+
+    <!-- NEW: month picker specifically for Insights -->
+    <label for="insights-month" style="min-width:80px;">Month</label>
+    <select id="insights-month">
+      <option value="all">All Months</option>
+      <!-- options populated dynamically by JS (same format as filter-month) -->
+    </select>
+  </div>
+
+  <!-- Insights results (cards inserted here by JS) -->
+  <div id="insights-summary" class="insights-summary" aria-live="polite"></div>
+</section>
+
+
+  <!-- <section class="container card insights" id="insights" aria-label="Insights">
+    <h3 class="card-title">Insights</h3>
+    <p class="muted">Use the filter dropdown above the transactions table to refine categories. The charts show category breakdown (pie) and trends (line).</p>
+    <div class="insights-controls">
+      <label for="insights-category">Filter by category</label>
+      <select id="insights-category">
+        <option value="all">All Categories</option>
+        <option value="Gym">Gym</option>
+        <option value="Food">Food</option>
+        <option value="Transport">Transport</option>
+        <option value="Salary">Salary</option>
+        <option value="Rent">Rent</option>
+        <option value="Others">Others</option>
+      </select>
+    </div>
+  </section> -->
+
+  <!-- Contact Section -->
+<!-- Contact Section -->
+<section class="container card contact-me" id="contact" aria-label="Contact me">
+  <h3 class="card-title">Contact Me</h3>
+
+  <div class="contact-top">
+    <div class="contact-text">
+      <p>If you'd like help with customization, reach me at <a href="mailto:your-email@example.com">your-email@example.com</a> or send a message below.</p>
+      <div class="socials" aria-label="Social links">
+        <a href="#" title="Twitter" aria-label="Twitter">
+          <!-- simple Twitter SVG -->
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M22 5.92c-.66.3-1.37.5-2.12.59.76-.46 1.34-1.2 1.61-2.08-.71.42-1.5.72-2.34.89A4.21 4.21 0 0015.5 4c-2.32 0-4.2 1.88-4.2 4.2 0 .33.04.65.11.96-3.49-.18-6.59-1.84-8.66-4.37-.36.62-.56 1.34-.56 2.11 0 1.46.74 2.75 1.87 3.5-.68-.02-1.32-.21-1.88-.52v.05c0 2.03 1.44 3.72 3.35 4.1-.35.09-.72.14-1.1.14-.27 0-.53-.03-.79-.07.53 1.63 2.06 2.82 3.88 2.85A8.44 8.44 0 012 19.6 11.9 11.9 0 008.29 21c7.55 0 11.68-6.26 11.68-11.68 0-.18-.01-.36-.02-.54.8-.57 1.5-1.27 2.06-2.08l-.01-.01z"/></svg>
+        </a>
+        <a href="#" title="LinkedIn" aria-label="LinkedIn">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4.98 3.5a2.5 2.5 0 11-.001 5.001A2.5 2.5 0 014.98 3.5zm.02 7H2.5v11h4.5v-11H5zM9 10h4.3v1.53h.06c.6-1.14 2.07-2.34 4.27-2.34 4.57 0 5.41 3.01 5.41 6.92V21h-4.5v-5.07c0-1.21-.02-2.77-1.69-2.77-1.69 0-1.95 1.33-1.95 2.68V21H9V10z"/></svg>
+        </a>
+        <a href="#" title="GitHub" aria-label="GitHub">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5a12 12 0 00-3.79 23.4c.6.11.82-.26.82-.58v-2.03c-3.34.73-4.04-1.45-4.04-1.45-.54-1.38-1.32-1.75-1.32-1.75-1.08-.74.08-.72.08-.72 1.2.08 1.83 1.24 1.83 1.24 1.06 1.82 2.78 1.29 3.46.98.11-.76.42-1.29.76-1.59-2.66-.3-5.46-1.33-5.46-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.16 0 0 1.01-.32 3.3 1.23a11.4 11.4 0 016 0c2.28-1.55 3.29-1.23 3.29-1.23.66 1.64.24 2.86.12 3.16.77.84 1.24 1.91 1.24 3.22 0 4.61-2.8 5.62-5.47 5.92.43.37.82 1.1.82 2.22v3.29c0 .33.22.7.82.58A12 12 0 0012 .5z"/></svg>
+        </a>
+      </div>
+    </div>
+
+    <form id="contact-form" class="contact-form" style="max-width:420px; width:100%;">
+      <div class="input-row">
+        <label class="input-label" for="contact-name">Name</label>
+        <div class="input-group"><input id="contact-name" type="text" placeholder="Your name" required /></div>
+      </div>
+
+      <div class="input-row">
+        <label class="input-label" for="contact-email">Email</label>
+        <div class="input-group"><input id="contact-email" type="email" placeholder="Your email" required /></div>
+      </div>
+
+      <div class="input-row full-width">
+        <label class="input-label" for="contact-message">Message</label>
+        <div class="input-group"><textarea id="contact-message" rows="4" placeholder="Write your message..." required></textarea></div>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn primary">Send Message</button>
+      </div>
+    </form>
+  </div>
+</section>
+
+</main>
+
+  <!-- <section class="container card contact-me" id="contact" aria-label="Contact me">
+    <h3 class="card-title">Contact Me</h3>
+    <p>If you'd like help with customization, reach me at <a href="mailto:your-email@example.com">your-email@example.com</a> or send a message below.</p>
+
+    <form id="contact-form" class="contact-form">
+      <div class="input-row">
+        <label class="input-label" for="contact-name">Name</label>
+        <div class="input-group">
+          <input id="contact-name" type="text" placeholder="Your name" required />
+        </div>
+      </div>
+
+      <div class="input-row">
+        <label class="input-label" for="contact-email">Email</label>
+        <div class="input-group">
+          <input id="contact-email" type="email" placeholder="Your email" required />
+        </div>
+      </div>
+
+      <div class="input-row full-width">
+        <label class="input-label" for="contact-message">Message</label>
+        <div class="input-group">
+          <textarea id="contact-message" rows="4" placeholder="Write your message..." required></textarea>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn primary">Send Message</button>
+      </div>
+    </form>
+  </section> -->
 
   <!-- Modal for alerts -->
   <div id="alert-modal" class="modal" aria-hidden="true">
